@@ -1,28 +1,50 @@
-#Conversión de dígitos a letra para cifras monetarias #
+#Conversión de dígitos a letra para cifras monetarias (Español-Pesos)#
 #Desarrollado para Kikoya #
 #Author: Diego HD #
 #Fecha: 10/06/2020 #
 
 class NumToLetter
 
+	#Método principal: recibe la cifra en número como String
+	#la valida, la transforma a letra y regresa la cifra en letra como String.
 	def DigitToLetterPesos(cifra)
-		a = ""
-		arr = []
 
-		#AGREGAR "PESO" O "PESOS" AL FINAL
+	   	#####VALIDACIONES#####
+
+	   	#1.-Verificar que no sea valor nulo:
+		if cifra.nil? 					
+			raise 'Parameter Error: valor nulo (Nil)'
+		end
+
+		#2.-Verificar que no sea una cadena vacía:
+		if cifra.length == 0			
+			raise 'Parameter Error: cadena vacía.'
+		end
+
+		#3.-Quitar ceros anteriores a primer dígito y letras:
+		cifra = cifra.to_i.to_s 		
+		
+		#Opcional: 
+		#4.-Verificar que no hayan escrito puros ceros:
+		#if cifra.length == 1 and cifra.to_i == 0	
+		#	raise 'Parameter Error: la cifra es cero y debe ser mayor a cero.'
+		#end
+
+		#Voltea la cadena para tener una mejor manipulación de las cifras:
+		cifra = cifra.reverse
+
+		#Define si la moneda deber ir en singular o en plural:
 		if cifra.to_i == 1 
-			puts 'b'
 			moneda = "PESO"
 		else
 			moneda = "PESOS"
 		end
 
-		#Turn around the String number for an easier manipulation:
-		cifra = cifra.reverse
-
-		#Divide in groups of 3 digits and save in order in an array:
-		for i in 1...cifra.length do
-			if i%3 == 0 then
+		#Divide en grupos de 3 digitos y lo guarda en orden en el arreglo:
+		a = ""
+		arr = []
+		for i in 0...cifra.length do
+			if (i+1)%3 == 0 then
 				a = a + cifra[i]
 				arr.push(a)
 				a = ""
@@ -30,15 +52,15 @@ class NumToLetter
 				a = a + cifra[i]
 			end
 		end
-
 		if not a.empty? then
 			arr.push(a)
 			a = ""
 		end
 
+		#Cada 3 dígitos de atrás para adelante manda a llamar al método auxiliar
+		#que convierte unidades, decenas, centenas en letra y dependiendo la 
+		#posición de esa tercia de dígitos le agrega la mil, millones, billones, miles de trillones:
 		str=""
-		cont = 0
-
 		for j in 0...arr.length do
 			case j
 				when 0
@@ -95,18 +117,27 @@ class NumToLetter
 			end
 		end
 
+		#Concatena la cifra en letra con la moneda en singular o plural según corresponda
+		#y asegura que sólo haya un espacio de separación:
 		if str[-1] == " "
 			str = str + moneda
 		else
 			str = str + " " + moneda
 		end
 
+		#Regresa la cadena (String) con el resultado final:
 		return str
-	end
+
+	end #End método principal: DigitToLetterPesos
 		
+
+	#Método auxiliar: transforma tres dígitos (String) por unidades, decenas, centenas 
+	#a letra y regresa esa cifra de 3 dígitos en letra (String).
 	def ThreeDigitsToLetter(x)
 		str = ""
-
+		dec = ""
+		cent = ""
+			#Recorre cada dígito de los la cifra de 1-3:
 			for j in 1..x.length do
 
 				#UNIDADES
@@ -137,19 +168,17 @@ class NumToLetter
 					when 9 
 						str = "NUEVE"
 					else 
-						str = ""
+						str = "¡¡¡Error en las unidades!!!"
 					end
 
 				#DECENAS
 				elsif j == 2
-					dec = ""
-					cent = ""
 					case x[1].to_i
 
-						#ONCE-DIECINUEVE
+						#DECENAS
 						when 0
 							str = str
-						when 1
+						when 1					#(DE ONCE A DIECINUEVE)
 							case x[0].to_i
 								when 0 
 									str = "DIEZ"
@@ -172,10 +201,10 @@ class NumToLetter
 								when 9 
 									str = "DIECINUEVE"
 								else 
-									str = "¡¡¡ Error en decenas en los diecis !!!"
+									str = "¡¡¡Error en decenas en los diecis!!!"
 							end
 
-						when 2
+						when 2						#(VEINTES)
 							case x[0].to_i
 								when 0 
 									str = "VEINTE"
@@ -198,10 +227,10 @@ class NumToLetter
 								when 9 
 									str = "VEINTINUEVE"
 								else 
-									str = "¡¡¡ Error en decenas en los veintes!!!"
+									str = "¡¡¡Error en decenas en los veintes!!!"
 							end
 
-						
+						#DECENAS (30-90)
 						when 3
 							dec = "TREINTA"
 						when 4
@@ -217,8 +246,10 @@ class NumToLetter
 						when 9
 							dec = "NOVENTA"
 						else
-							dec = "¡¡¡ Error en decenas !!!"
+							dec = "¡¡¡Error en decenas (30-90)!!!"
 					end
+					#Ajuste, si la unidad era CERO, pero la decena no, o si la decena es 1 ó 2 ó 0,
+					#en ese caso, se reescribe toda la cadena. De lo contrario se coloca un "Y" y la unidad:
 					if x[1].to_i == 0 or x[1].to_i == 1  or  x[1].to_i ==2
 						str = str
 					elsif x[0].to_i == 0 
@@ -257,23 +288,25 @@ class NumToLetter
 						else
 							cent = "¡¡¡ Error en centenas !!!"
 					end
+					#Verifica los espacios:
 					if x[0].to_i == 0 and x[1].to_i == 0
 						str = cent + str
 					elsif x[2].to_i != 0
 						str = cent + " " + str
 					end
-
 				end
-
 			end
+		#Regresa la cadena con la cifra de 3 en letra:
 		return str
-	end
+
+	end #End método auxiliar: ThreeDigitsToLetter
 
 end #End Class
 
-#####################
 
-#Main:
+###############################################################
+
+#Main para tests manuales:
 if __FILE__ == $0
 
 	print 'c: '
@@ -281,11 +314,12 @@ if __FILE__ == $0
 
 	while cifra != 'x'
 		num = NumToLetter.new{}
-		st = num.DigitToLetterPesos(cifra.to_s)
+		st = num.DigitToLetterPesos(cifra)
   		print "l: " + st.to_s + "\n"
   		print 'c: '
 		cifra = gets
 	end
+
 end
 
 
