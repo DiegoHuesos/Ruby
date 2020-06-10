@@ -1,4 +1,4 @@
-#Conversión de dígitos a letra para cifras monetarias (Español-Pesos)#
+#Conversión de dígitos a letra para cifras monetarias en Español#
 #Desarrollado para Kikoya #
 #Author: Diego HD #
 #Fecha: 10/06/2020 #
@@ -7,10 +7,16 @@ class NumToLetter
 
 	#Método principal: recibe la cifra en número como String
 	#la valida, la transforma a letra y regresa la cifra en letra como String.
-	def DigitToLetterPesos(cifra)
+
+	#Parámetros: 
+		# -> String con la cifra en dígitos (ej. "345678")
+		# -> Tipo de cambio/moneda en singular (ej. "PESO" ó "DÓLAR")
+		# -> Tipo de cambio/moneda en plural (ej. "PESOS" ó "DÓLARES")
+
+	def DigitToLetterPesos(cifra, monedaSingular, monedaPlural)
 
 	   	#####VALIDACIONES#####
-
+	   	
 	   	#1.-Verificar que no sea valor nulo:
 		if cifra.nil? 					
 			raise 'Parameter Error: valor nulo (Nil)'
@@ -21,24 +27,48 @@ class NumToLetter
 			raise 'Parameter Error: cadena vacía.'
 		end
 
-		#3.-Quitar ceros anteriores a primer dígito y letras:
+		#Separamos la cifra por puntos para obtener los enteros y los centavos:
+	   	enteros_y_centavos= cifra.split(".")
+
+	   	#3.-Verificamos que sólo exita un punto de separación y no más:
+	   	if enteros_y_centavos.length > 2
+	   		raise 'Parameter Error: existe más de un punto en la cifra'
+	   	end
+
+	   	#Asignamos a la variable "cifra" los valores enteros y a la variable "centavos" los centavos,
+	   	#también quitamos letras, comas y comillas ('´^`,"), todo los que no sea número:
+	   	cifra = enteros_y_centavos[0].split(//).map {|x| x[/\d+/]}.compact.join("").to_s
+	   	centavos = enteros_y_centavos[1]
+	   	#Verificamos que haya centavos:
+	   	if not centavos.nil? 
+	   		centavos = centavos.split(//).map {|x| x[/\d+/]}.compact.join("").to_s
+	   	end
+
+	   	#En caso de tener un sólo caractér en centavos, le añadimos un cero para que 
+	   	#se cuente como decenas en el método auxiliar, i.e., ".1" --> ".10"
+	   	#Así, cuando se voltee ("01"), se pueda contar como "DIEZ CENTAVOS": 
+	   	if not centavos.nil? and centavos.length == 1 
+	   		centavos = centavos + "0"
+	   	end
+
+		#4.-Quitar ceros anteriores y letras a primer dígito:
 		cifra = cifra.to_i.to_s 		
 		
 		#Opcional: 
-		#4.-Verificar que no hayan escrito puros ceros:
+		#5.-Verificar que no hayan escrito puros ceros:
 		#if cifra.length == 1 and cifra.to_i == 0	
 		#	raise 'Parameter Error: la cifra es cero y debe ser mayor a cero.'
 		#end
 
+		#Define si la moneda deber ir en singular o en plural, debe ser antes del reverse:
+		if cifra.to_i == 1 
+			moneda = monedaSingular #"PESO"
+		else
+			moneda = monedaPlural #"PESOS"
+		end
+
 		#Voltea la cadena para tener una mejor manipulación de las cifras:
 		cifra = cifra.reverse
-
-		#Define si la moneda deber ir en singular o en plural:
-		if cifra.to_i == 1 
-			moneda = "PESO"
-		else
-			moneda = "PESOS"
-		end
 
 		#Divide en grupos de 3 digitos y lo guarda en orden en el arreglo:
 		a = ""
@@ -78,14 +108,11 @@ class NumToLetter
 					band = true
 					i = 0
 					while i<6 and band do
-						puts i
 						if cifra[i].to_i != 0
 							band = false
 						end
 						i = i + 1
 					end
-					puts cf
-					puts band
 					if i==6
 						str = self.ThreeDigitsToLetter(arr[j].to_s).to_s + b + "DE "
 					else
@@ -117,13 +144,50 @@ class NumToLetter
 			end
 		end
 
-		#Concatena la cifra en letra con la moneda en singular o plural según corresponda
-		#y asegura que sólo haya un espacio de separación:
-		if str[-1] == " "
-			str = str + moneda
+		if centavos.nil? 
+			cents = ""
+		elsif centavos[0].to_s.to_i == 0 and (centavos[1].to_s.to_i == 0 or centavos[1].nil?)
+			cents = ""
+		#Con esto nos aseguramos que sea 01 centavos y con esto coloquemos "CENTAVO" específicamente:
+		elsif centavos[0].to_s.to_i == 0 and centavos[1].to_s.to_i == 1
+			cents = " CENTAVO"
+		#De cuaqluier otra forma será centavos:
 		else
-			str = str + " " + moneda
+			cents = " CENTAVOS"
 		end
+
+		#Concatena la cifra en letra con la moneda en singular o plural según corresponda
+		#y asegura que sólo haya un espacio de separación.
+		#Además, pregunta si hay centavos y los agrega en caso de afirmativo:
+		
+		#Si ya tiene espacio:
+		if str[-1] == " "		
+			#Si no tiene centavos:	
+			if centavos.nil?	
+				str = str + moneda
+			#Si sus centavos son ceros ej. 3.0 ó 45.00:	
+			elsif centavos[0].to_s.to_i == 0 and (centavos[1].to_s.to_i == 0 or centavos[1].nil?)
+				str = str + " " + moneda
+			#Si sí tiene centavos:
+			else 					
+				#Gracias a que pedimos el substring de dos espacios, se obliga a que haya decenas y undidades,
+				#de tal forma que 8.1 sea "OCHO PESOS CON DIEZ CENTAVOS" y no "UN CENTAVO":
+				str = str + moneda + " CON " + self.ThreeDigitsToLetter(centavos[0..1].to_s.reverse) + cents
+			end
+		#Si aún no tiene espacio:
+		else 			
+			#Si no tiene centavos:				
+			if centavos.nil? 				
+				str = str + " " + moneda
+			#Si sus centavos son ceros ej. 3.0 ó 45.00:	
+			elsif centavos[0].to_s.to_i == 0 and (centavos[1].to_s.to_i == 0 or centavos[1].nil?)
+				str = str + " " + moneda
+			#Si sí tiene centavos:
+			else 						
+				str = str + " " + moneda + " CON " + self.ThreeDigitsToLetter(centavos[0..1].to_s.reverse) + cents
+			end	
+		end
+		#Nota: centavos[0..1] nos devuelve un string de 
 
 		#Regresa la cadena (String) con el resultado final:
 		return str
@@ -312,14 +376,12 @@ if __FILE__ == $0
 	print 'c: '
 	cifra = gets
 
-	while cifra != 'x'
+	while cifra != "x"
 		num = NumToLetter.new{}
-		st = num.DigitToLetterPesos(cifra)
+		st = num.DigitToLetterPesos(cifra, "PESO", "PESOS")
   		print "l: " + st.to_s + "\n"
   		print 'c: '
 		cifra = gets
 	end
 
 end
-
-
